@@ -1,20 +1,22 @@
 import random
 from collections import deque
+from termcolor import colored, cprint
 
 # Planer (for this edition)
-# - git it
-# - fancy select cards (only possible cards)
 # - Limit player possibilities
 # - 3 rounds (or selectable)
+# - fancy select cards (only possible cards)?
 # - Write in player names
 
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("-b", "--blind", help="increase output verbosity",
+parser.add_argument("-o", "--open", help="increase output verbosity",
                     action="store_true")
 args = parser.parse_args()
-if args.blind:
+if args.open:
+    blind = False
+else:
     blind = True
 
 class Card(object):
@@ -88,12 +90,12 @@ class Deck(object):
     def deal(self):
         return self.cards.pop()
 
-
 class Player(object):
     def __init__(self, name):
         self.name = name
         self.hand = []
         self.pickedCards = []
+        self.legalMoves = []
 
     def pickCard(self, num):
         card = self.hand[num-1]
@@ -117,7 +119,6 @@ class Player(object):
 
 
         return self
-
 
     def showPickedCards(self):
         for x in range(len(self.pickedCards)):
@@ -174,8 +175,6 @@ class Player(object):
         text = empty.join(array)
         return text
 
-
-
     # Draw n number of cards from a deck
     # Returns true in n cards are drawn, false if less then that
     def draw(self, deck, num=1):
@@ -188,13 +187,26 @@ class Player(object):
         return True
 
     # Display all the cards in the players hand
-    def showHand(self):
-        #print "{}'s hand: {}".format(self.name, self.hand)
+    def showHand(self, showLegal=False):
+
+        showLegalMoves=[]
+
+        if showLegal and Game.currentPlay:
+            Game.getLegalMoves()
+            showLegalMoves = Game.players[Game.currentPlayer].legalMoves
+        else:
+            #set all as legal
+            for x in range(len(Game.players[Game.currentPlayer].hand)):
+                showLegalMoves.append(1)
+
         print "{}'s hand: ".format(self.name)
-        #l = len(self.hand)
 
         for x in range(len(self.hand)):
-            #outNumber = x+1
+
+            #format quick fix
+            if x == 0 and showLegal:
+                print "",
+            
             print "{}.[".format(x+1),
             card = str(self.hand[x])
             #print len(card)
@@ -208,6 +220,8 @@ class Player(object):
                # print card
             #print suit
 
+
+
             ###symboler
             if suit == "H":
                 print card + u'\u2665',
@@ -218,7 +232,21 @@ class Player(object):
             elif suit == "S":
                 print card + u'\u2660',
 
-            print "]"
+            print "]",
+            
+            if not showLegal:
+                print ""
+
+            else:
+                if showLegalMoves[x] == 0:
+                    print " ",
+                    cprint(u'\u2022', "red")
+
+
+                else:
+                    print " ",
+                    #print u'\u2020'
+                    cprint(u'\u2022', "green")
 
                 #### Farger og slikt 
                 #card = card + 
@@ -252,7 +280,6 @@ class Player(object):
                         self.hand[idx] = self.hand[idx+1]
                         self.hand[idx+1] = temp
 
-
     def getValue(self, card):
         # number = self.hand[num]
         # print number
@@ -274,7 +301,6 @@ class Player(object):
             realValue = int(cardVal)
         return realValue
         #print val
-
 
     def showCard(self, num):
         #print self.hand[num]
@@ -303,16 +329,22 @@ class Player(object):
 
         print "]",
 
-
     def discard(self, num):
         return self.hand.pop(num)
 
+class Printer():
+    def emptyLine(self):
+        print ""
 
 class Game(object):
     def __init__(self):
         self.players = []
         self.roundNumber = 0
-        #self.build()
+        self.currentPlay = []
+        self.cardValuesOfCurrentPlay = []
+        self.currentPlayer = 0
+        self.cardNrToBeat = 0
+
 
     def joinGame(self, player):
         self.players.append(player)
@@ -340,6 +372,53 @@ class Game(object):
         return realValue
         #print val
 
+    def getLegalMoves(self):
+        #empty legalmoves[]
+        self.players[self.currentPlayer].legalMoves = []
+
+        #If there is a currentPlayList, all moves are legal
+        if not self.currentPlay:
+            for x in range(len(self.players[self.currentPlayer].hand)):
+                self.players[self.currentPlayer].legalMoves.append(1)
+
+        if len(self.currentPlay) == 1:
+        #for the card to beat
+        # Make array of illegal (0) and legal (1)
+            for x in range(len(self.players[self.currentPlayer].hand)):
+                if x == 0:
+                    #lowest is always legal
+                    self.players[self.currentPlayer].legalMoves.append(1)
+                else:
+                    playerCardValue = self.getValue(self.players[self.currentPlayer].hand[x])
+                    # print "playercardvalue ",
+                    # print playerCardValue
+                    # print "currentPlay "
+                    # print self.currentPlay[0]
+                    if playerCardValue >= self.cardValuesOfCurrentPlay[0]:
+                        self.players[self.currentPlayer].legalMoves.append(1)
+                    else:
+                        self.players[self.currentPlayer].legalMoves.append(0)
+        #if length of currentPlay is more than one
+        else:
+
+            for x in range(len(self.players[self.currentPlayer].pickedCards)):
+                if self.getValue(self.players[self.currentPlayer].pickedCards[x])>=self.cardValuesOfCurrentPlay[self.cardNrToBeat]:
+                    ## and there is a bigger card in currentPlay
+                    if len(self.currentPlay)>=self.cardNrToBeat+1:
+                        if self.getValue(self.players[self.currentPlayer].pickedCards[x])<self.cardValuesOfCurrentPlay[self.cardNrToBeat+1]:
+                            self.cardNrToBeat=+1
+
+            for x in range(len(self.players[self.currentPlayer].hand)):
+                if x == 0:
+                    #lowest is always legal
+                    self.players[self.currentPlayer].legalMoves.append(1)
+                else:
+                    playerCardValue = self.getValue(self.players[self.currentPlayer].hand[x])
+                    if playerCardValue >= self.cardValuesOfCurrentPlay[self.cardNrToBeat]:
+                        self.players[self.currentPlayer].legalMoves.append(1)
+                    else:
+                        self.players[self.currentPlayer].legalMoves.append(0)
+
     def rearrangePlayers(self, winner):
         winnerName = str(self.players[winner].name)
         self.players = deque(self.players)
@@ -354,16 +433,16 @@ class Game(object):
         self.roundNum =+1
 
         for x in range(len(self.players)):
+            self.currentPlayer = x
+            self.cardNrToBeat = 0
             if x==0:
 
                 nowHand = len(self.players[x].hand)
                 if nowHand <= 1:
-                   # for z in range(len(self.players)):
-                    #    self.players[z].showHand()
                     self.endGame()
 
                 print ""
-                self.players[x].showHand()
+                self.players[x].showHand(showLegal=True)
                 text = raw_input(self.players[x].name+", how many cards do you want to Play? ")
                 numberOfCards = int(text)
 
@@ -381,8 +460,14 @@ class Game(object):
                     text = raw_input(self.players[x].name+", what card number do you want to play?")
                     cardPick = int(text)
                     self.players[x].pickCard(cardPick)
-                    self.players[x].showHand()
+                    self.players[x].showHand(showLegal=True)
                 
+                self.currentPlay = self.players[x].pickedCards
+                self.cardValuesOfCurrentPlay = []
+                for y in range(len(self.players[x].pickedCards)):
+                    self.cardValuesOfCurrentPlay.append(self.getValue(self.currentPlay[y]))
+
+        
                 newLeader = 0
 
                 if blind:
@@ -395,16 +480,26 @@ class Game(object):
                 
                 print ""
 
-                self.players[x].showHand()
 
                 for y in range(numberOfCards):
+                    self.players[x].showHand(showLegal=True)
                     text = raw_input(self.players[x].name+", what card number do you want to play?")
                     number2 = int(text)
 
                     self.players[x].pickCard(number2)
+
                 oldLeader = newLeader
                 newLeader = self.compareTwo(x,oldLeader)
-                #self.players[x].showPickedCards()
+
+                self.currentPlay = self.players[newLeader].pickedCards
+                self.cardValuesOfCurrentPlay = []
+                for y in range(len(self.players[newLeader].pickedCards)):
+                    self.cardValuesOfCurrentPlay.append(self.getValue(self.currentPlay[y]))
+
+
+        self.currentPlay = []
+        
+
 
         winner = newLeader 
         
@@ -438,7 +533,7 @@ class Game(object):
         #     print playerValue[x]
         print""
 
-        for x in range(len(self.players))
+        for x in range(len(self.players)):
             self.players[x].showHand()
 
         print "{} wins the game!".format(self.players[lowPlayer].name)
@@ -557,17 +652,14 @@ class Game(object):
         print ""
         print "{} begins!".format(self.players[highestPlayer].name)
 
-        self.rearrangePlayers(highestPlayer)
-
-        if not blind:
-            self.printBlind(50)
-            self.pause()
+        self.rearrangePlayers(highestPlayer)            
 
     def discardRound(self):
         for x in range(len(self.players)):
 
-            self.pause()
-            self.printBlind(50)
+            if blind:
+                self.pause()
+                self.printBlind(50)
 
             self.players[x].showHand()
 
@@ -599,12 +691,10 @@ class Game(object):
                 self.players[x].draw(Deck, discards)
                 self.players[x].sort()
                 self.players[x].showHand()
-                
 
-
-
-        self.pause()
-        self.printBlind(50)
+        if blind:
+            self.pause()
+            self.printBlind(50)
 
     def playGame(self):
         
@@ -636,11 +726,11 @@ class Game(object):
         winner = self.endGame()
 
 
-
 # Test making a Deck
 Deck = Deck()
 Deck.shuffle()
 Game = Game()
+Printer = Printer()
 
 
 # deck.show()
