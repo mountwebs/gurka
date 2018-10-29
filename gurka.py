@@ -460,6 +460,7 @@ class Game(object):
                     self.endGame()
 
                 for i in range(numberOfCardsToPlay):
+                    #self.players[i].showHand(showLegal=True)
                     text = raw_input(self.players[x].name+", what card number do you want to play?")
                     cardPick = int(text)
                     self.players[x].pickCard(cardPick)
