@@ -1,7 +1,7 @@
 # Gurka
 **The wonderful game of Gurka, written in Python.**
 
-Gurka is a simple card game. Read about the game and the rules [here](https://www.pagat.com/last/cucumber.html).(the rules of this particular version seems to be something between the Danish and the Icelandic edtions).
+Gurka is a simple card game. Read about the game and the rules [here](https://www.pagat.com/last/cucumber.html). (The rules of this particular version seems to be something between the Danish and the Icelandic rules).
 
 *Dedicated to the masters' reading room at the (TIK Centre, University of Oslo) and the people in it.*
 
