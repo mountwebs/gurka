@@ -332,10 +332,6 @@ class Player(object):
     def discard(self, num):
         return self.hand.pop(num)
 
-class Printer():
-    def emptyLine(self):
-        print ""
-
 class Game(object):
     def __init__(self):
         self.players = []
@@ -744,65 +740,3 @@ Game.joinGame(Stian)
 Game.joinGame(Ida)
 
 Game.playGame()
-# Stian.draw(Deck, 7)
-# Stian.sort()
-# Stian.showHand()
-
-# Bob.draw(Deck, 7)
-# Bob.sort()
-# Bob.showHand()
-
-# Helge.draw(Deck, 7)
-# Helge.sort()
-# Helge.showHand()
-# Game.endGame()
-
-# Game.playRound()
-
-# Stian.pickCard(2)
-# Bob.pickCard(3)
-# Helge.pickCard(3)
-# Stian.showPickedCards()
-# Bob.showPickedCards()
-# Helge.showPickedCards()
-
-
-
-
-
-
-### Discarding
-# text = raw_input("How many cards to dicard?")
-# number = int(text)
-
-# for _ in range(number):
-#     text = raw_input("")
-#     discard = int(text)
-#     Stian.discard(discard-1)
-#     Stian.showHand()
-#     print _
-###
-
-### Testing
-
-# Test making a Card
-# card = Card('Spades', 6)
-# print card
-
-### Print av "suits"
-#print u'\u2660'
-# u2665  u2666  u2663
-
-#Stian.showCard(2)
-
-
-#Stian.draw(Deck, number)
-#Stian.sort()
-#Stian.showHand()
-
-#Stian.showHand()
-#Stian.discard(0)
-
-#Helge.draw(myDeck, 2)
-
-#Helge.showHand()
