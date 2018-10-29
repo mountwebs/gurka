@@ -9,3 +9,9 @@ Gurka is a simple card game. Read about the game and the rules [here](https://ww
 ## Reguirements:
 - Python 2.7: https://www.python.org/downloads/
 - termcolor: https://pypi.org/project/termcolor/
+
+## Future plans
+- Adding more rounds to the game
+- Limiting player possibilities
+- Fancy selection of cards
+- Adding ai
