@@ -726,7 +726,6 @@ class Game(object):
 Deck = Deck()
 Deck.shuffle()
 Game = Game()
-Printer = Printer()
 
 
 # deck.show()
