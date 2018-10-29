@@ -2,11 +2,11 @@ import random
 from collections import deque
 from termcolor import colored, cprint
 
-# Planer (for this edition)
+# Plans (for this edition)
 # - Limit player possibilities
 # - 3 rounds (or selectable)
 # - fancy select cards (only possible cards)?
-# - Write in player names
+
 
 
 import argparse
@@ -18,6 +18,7 @@ if args.open:
     blind = False
 else:
     blind = True
+
 
 class Card(object):
     def __init__(self, suit, val):
@@ -47,19 +48,12 @@ class Card(object):
 
         return "{}{}".format(val, self.suit)
 
-        # return "{} of {}, {}".format(val, self.suit, self.realValue)
-
-    #def showValue(self)
-    #    return "{}".format(self.value)
-
-    # def value(self)
-    #    return self.value 
-
 
 class Deck(object):
     def __init__(self):
         self.cards = []
         self.build()
+        global deckNr
 
     # Display all cards in the deck
     def show(self):
@@ -69,9 +63,10 @@ class Deck(object):
     # Generate 52 cards
     def build(self):
         self.cards = []
-        for suit in ['H', 'C', 'D', 'S']:
-            for val in range(1,14):
-                self.cards.append(Card(suit, val))
+        for x in range(deckNr):
+            for suit in ['H', 'C', 'D', 'S']:
+                for val in range(1,14):
+                    self.cards.append(Card(suit, val))
 
     # Shuffle the deck
     def shuffle(self, num=1):
@@ -341,7 +336,7 @@ class Game(object):
         self.currentPlayer = 0
         self.cardNrToBeat = 0
         self.numberOfPlayers = 0
-        #self.SetUp()
+        #self.setUp()
 
 
     def joinGame(self, player):
@@ -739,27 +734,26 @@ class Game(object):
 
         winner = self.endGame()
 
-    # def setSettings():
-        #text = raw_input("How many players?")
-        #number = int(text)
-
-
-
+    def setUp(self):
+        nr = raw_input("How many players? ")
+        nr = int(nr)
+        names = []
+        for x in range(nr):
+            name = raw_input("What is the name of player {}? ".format(x+1))
+            name = str(name)
+            newPlayer = Player(name)
+            self.players.append(newPlayer)
+    
 
 # Test making a Deck
+deckNr = 1
+
 Deck = Deck()
 Deck.shuffle()
-Game = Game()
 
+Game = Game()
+Game.setUp()
+Game.playGame()
 
 # deck.show()
 
-Helge = Player("Helge")
-Stian = Player("Stian")
-Ida = Player("Ida")
-
-Game.joinGame(Helge)
-Game.joinGame(Stian)
-Game.joinGame(Ida)
-
-Game.playGame()
