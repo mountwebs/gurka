@@ -340,6 +340,8 @@ class Game(object):
         self.cardValuesOfCurrentPlay = []
         self.currentPlayer = 0
         self.cardNrToBeat = 0
+        self.numberOfPlayers = 0
+        #self.SetUp()
 
 
     def joinGame(self, player):
@@ -386,10 +388,7 @@ class Game(object):
                     self.players[self.currentPlayer].legalMoves.append(1)
                 else:
                     playerCardValue = self.getValue(self.players[self.currentPlayer].hand[x])
-                    # print "playercardvalue ",
-                    # print playerCardValue
-                    # print "currentPlay "
-                    # print self.currentPlay[0]
+
                     if playerCardValue >= self.cardValuesOfCurrentPlay[0]:
                         self.players[self.currentPlayer].legalMoves.append(1)
                     else:
@@ -425,6 +424,13 @@ class Game(object):
             self.players.rotate(1)
             zeroPlayer = str(self.players[0].name)
 
+    def checkIfDoubleCards(self):
+        for x in range(len(self.players[self.currentPlayer].hand)):
+            for y in range(x+1,len(self.players[self.currentPlayer].hand)):
+                if self.getValue(self.players[self.currentPlayer].hand[x])==self.getValue(self.players[self.currentPlayer].hand[y]):
+                    return(True)
+        return(False)
+
     def playRound(self):
         self.roundNum =+1
 
@@ -438,21 +444,27 @@ class Game(object):
                     self.endGame()
 
                 print ""
-                self.players[x].showHand(showLegal=True)
-                text = raw_input(self.players[x].name+", how many cards do you want to Play? ")
-                numberOfCards = int(text)
+                if self.checkIfDoubleCards():
+                    self.players[x].showHand(showLegal=True)
+                    text = raw_input(self.players[x].name+", how many cards do you want to Play? ")
+                    numberOfCardsToPlay = int(text)
 
-                nowHand = len(self.players[x].hand) - numberOfCards
+                    
+                else:
 
-                if nowHand == 0:
+                    numberOfCardsToPlay = 1
+                    atHand = len(self.players[x].hand) - 1
+
+                atHand = len(self.players[x].hand) - numberOfCardsToPlay
+
+
+
+                if atHand == 0:
                     for z in range(len(self.players)):
                         self.players[z].showHand()
                     self.endGame()
-                    
 
-
-                for i in range(numberOfCards):
-                    
+                for i in range(numberOfCardsToPlay):
                     text = raw_input(self.players[x].name+", what card number do you want to play?")
                     cardPick = int(text)
                     self.players[x].pickCard(cardPick)
@@ -477,7 +489,7 @@ class Game(object):
                 print ""
 
 
-                for y in range(numberOfCards):
+                for y in range(numberOfCardsToPlay):
                     self.players[x].showHand(showLegal=True)
                     text = raw_input(self.players[x].name+", what card number do you want to play?")
                     number2 = int(text)
@@ -651,6 +663,8 @@ class Game(object):
         self.rearrangePlayers(highestPlayer)            
 
     def discardRound(self):
+
+        zero = False
         for x in range(len(self.players)):
 
             if blind:
@@ -665,11 +679,14 @@ class Game(object):
                 discardsText = raw_input(self.players[x].name+", how many cards do you want to discard? ")
                 discards = int(discardsText)
 
+                if discards == 0:
+                    zero = True
+                    break
+
                 for y in range(0,discards):
                     discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
                     discard = int(discardText)
                     self.players[x].discard(discard-1)
-                    self.players[x].showHand()
                 self.players[x].draw(Deck, discards)
                 self.players[x].sort()
                 self.players[x].showHand()
@@ -688,7 +705,8 @@ class Game(object):
                 self.players[x].sort()
                 self.players[x].showHand()
 
-        if blind:
+
+        if blind and not zero:
             self.pause()
             self.printBlind(50)
 
@@ -720,6 +738,12 @@ class Game(object):
             x=x+1
 
         winner = self.endGame()
+
+    # def setSettings():
+        #text = raw_input("How many players?")
+        #number = int(text)
+
+
 
 
 # Test making a Deck
