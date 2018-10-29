@@ -682,6 +682,7 @@ class Game(object):
                     discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
                     discard = int(discardText)
                     self.players[x].discard(discard-1)
+                    self.players[x].showHand()
                 self.players[x].draw(Deck, discards)
                 self.players[x].sort()
                 self.players[x].showHand()
@@ -692,7 +693,7 @@ class Game(object):
 
                 for y in range(0,discards):
                     #self.players[x].showHand()
-                    discardText = raw_input(self.players[x].name+", what card number do you wnat to discard? ")
+                    discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
                     discard = int(discardText)
                     self.players[x].discard(discard)
                     self.players[x].showHand()
