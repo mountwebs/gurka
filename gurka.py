@@ -48,7 +48,6 @@ class Card(object):
 
         return "{}{}".format(val, self.suit)
 
-
 class Deck(object):
     def __init__(self):
         self.cards = []
@@ -427,7 +426,7 @@ class Game(object):
         return(False)
 
     def playRound(self):
-        self.roundNum =+1
+        self.roundNumber =+1
 
         for x in range(len(self.players)):
             self.currentPlayer = x
@@ -460,11 +459,13 @@ class Game(object):
                     self.endGame()
 
                 for i in range(numberOfCardsToPlay):
-                    #self.players[i].showHand(showLegal=True)
+                    if not self.checkIfDoubleCards():
+                        self.players[i].showHand(showLegal=True)
                     text = raw_input(self.players[x].name+", what card number do you want to play?")
                     cardPick = int(text)
                     self.players[x].pickCard(cardPick)
-                    self.players[x].showHand(showLegal=True)
+                    if self.checkIfDoubleCards():
+                        self.players[i].showHand(showLegal=True)
                 
                 self.currentPlay = self.players[x].pickedCards
                 self.cardValuesOfCurrentPlay = []
