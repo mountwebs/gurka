@@ -6,7 +6,7 @@ Gurka is a simple card game. Read about the game and the rules [here](https://ww
 *Dedicated to the masters' reading room at the (TIK Centre, University of Oslo) and the people in it.*
 
 
-## Reguirements:
+## Requirements:
 - Python 2.7: https://www.python.org/downloads/
 - termcolor: https://pypi.org/project/termcolor/
 
