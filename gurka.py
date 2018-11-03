@@ -1,17 +1,29 @@
 import random
 from collections import deque
 from termcolor import colored, cprint
+import argparse
+import textwrap
 
 # Plans (for this edition)
 # - Limit player possibilities
 # - 3 rounds (or selectable)
 # - fancy select cards (only possible cards)?
 
+# Missing feature: ending with two or more cards?
+# Missing feature two players wins the round
 
 
-import argparse
+parser = argparse.ArgumentParser(
+     formatter_class=argparse.RawDescriptionHelpFormatter,
+     description=textwrap.dedent('''\
+The card game Gurka, written in Python.
+--------------------------------
+
+         '''))
 parser = argparse.ArgumentParser()
-parser.add_argument("-o", "--open", help="increase output verbosity",
+parser.add_argument("-o", "--open", help="Everyone can see everyones cards",
+                    action="store_true")
+parser.add_argument("-m", "--many", help="First player can always play many cards, regardless of wether s/he has double cards.",
                     action="store_true")
 args = parser.parse_args()
 if args.open:
@@ -90,6 +102,7 @@ class Player(object):
         self.hand = []
         self.pickedCards = []
         self.legalMoves = []
+        self.score = 0;
 
     def pickCard(self, num):
         card = self.hand[num-1]
@@ -335,6 +348,7 @@ class Game(object):
         self.currentPlayer = 0
         self.cardNrToBeat = 0
         self.numberOfPlayers = 0
+        self.numberOfRounds = 0
         #self.setUp()
 
 
@@ -426,125 +440,224 @@ class Game(object):
         return(False)
 
     def playRound(self):
-        self.roundNumber =+1
 
-        for x in range(len(self.players)):
-            self.currentPlayer = x
-            self.cardNrToBeat = 0
-            if x==0:
+        while True:
 
-                nowHand = len(self.players[x].hand)
-                if nowHand <= 1:
-                    self.endGame()
+            for x in range(len(self.players)):
+                self.currentPlayer = x
+                self.cardNrToBeat = 0
+                if x==0:
 
-                print ""
-                if self.checkIfDoubleCards():
-                    self.players[x].showHand(showLegal=True)
-                    text = raw_input(self.players[x].name+", how many cards do you want to Play? ")
-                    numberOfCardsToPlay = int(text)
+                    nowHand = len(self.players[x].hand)
+                    if nowHand <= 1:
+                        return
 
+                    print ""
+                    if self.checkIfDoubleCards() or args.many:
+                        self.players[x].showHand(showLegal=True)
+                        text = raw_input(self.players[x].name+", how many cards do you want to Play? ")
+                        numberOfCardsToPlay = int(text)
+
+
+
+
+                        
+                    else:
+
+                        numberOfCardsToPlay = 1
+                        atHand = len(self.players[x].hand) - 1
+
+                    atHand = len(self.players[x].hand) - numberOfCardsToPlay
+
+
+                    if atHand == 0:
+                        return
+                        # for z in range(len(self.players)):
+                        #     self.players[z].showHand()
+                        # self.endGame()
+
+                    for i in range(numberOfCardsToPlay):
+                        if not self.checkIfDoubleCards():
+                            self.players[x].showHand(showLegal=True)
+                        text = raw_input(self.players[x].name+", what card number do you want to play?")
+                        cardPick = int(text)
+                        self.players[x].pickCard(cardPick)
+                        if self.checkIfDoubleCards():
+                            self.players[x].showHand(showLegal=True)
                     
+                    self.currentPlay = self.players[x].pickedCards
+                    self.cardValuesOfCurrentPlay = []
+                    for y in range(len(self.players[x].pickedCards)):
+                        self.cardValuesOfCurrentPlay.append(self.getValue(self.currentPlay[y]))
+
+            
+                    newLeader = 0
+
+                    if blind:
+                        self.pause()
+                        self.printBlind(50)
+                    
+                    print "{} plays".format(self.players[x].name),
+                    self.players[x].showPickedCards()
                 else:
-
-                    numberOfCardsToPlay = 1
-                    atHand = len(self.players[x].hand) - 1
-
-                atHand = len(self.players[x].hand) - numberOfCardsToPlay
+                    
+                    print ""
 
 
+                    for y in range(numberOfCardsToPlay):
+                        self.players[x].showHand(showLegal=True)
+                        text = raw_input(self.players[x].name+", what card number do you want to play?")
+                        number2 = int(text)
 
-                if atHand == 0:
-                    for z in range(len(self.players)):
-                        self.players[z].showHand()
-                    self.endGame()
+                        self.players[x].pickCard(number2)
 
-                for i in range(numberOfCardsToPlay):
-                    if not self.checkIfDoubleCards():
-                        self.players[i].showHand(showLegal=True)
-                    text = raw_input(self.players[x].name+", what card number do you want to play?")
-                    cardPick = int(text)
-                    self.players[x].pickCard(cardPick)
-                    if self.checkIfDoubleCards():
-                        self.players[i].showHand(showLegal=True)
-                
-                self.currentPlay = self.players[x].pickedCards
-                self.cardValuesOfCurrentPlay = []
-                for y in range(len(self.players[x].pickedCards)):
-                    self.cardValuesOfCurrentPlay.append(self.getValue(self.currentPlay[y]))
+                    oldLeader = newLeader
+                    newLeader = self.compareTwo(x,oldLeader)
 
+                    self.currentPlay = self.players[newLeader].pickedCards
+                    self.cardValuesOfCurrentPlay = []
+                    for y in range(len(self.players[newLeader].pickedCards)):
+                        self.cardValuesOfCurrentPlay.append(self.getValue(self.currentPlay[y]))
+
+
+            self.currentPlay = []
+
+            winner = newLeader 
+
+            print self.players[winner].name, " wins this round!"
+            print""
+            self.trashCards()
+            self.rearrangePlayers(winner)
+
+
+            if not blind:
+                for y in range(len(self.players)):
+                    self.players[y].showHand()
         
-                newLeader = 0
-
-                if blind:
-                    self.pause()
-                    self.printBlind(50)
-                
-                print "{} plays".format(self.players[x].name),
-                self.players[x].showPickedCards()
-            else:
-                
-                print ""
-
-
-                for y in range(numberOfCardsToPlay):
-                    self.players[x].showHand(showLegal=True)
-                    text = raw_input(self.players[x].name+", what card number do you want to play?")
-                    number2 = int(text)
-
-                    self.players[x].pickCard(number2)
-
-                oldLeader = newLeader
-                newLeader = self.compareTwo(x,oldLeader)
-
-                self.currentPlay = self.players[newLeader].pickedCards
-                self.cardValuesOfCurrentPlay = []
-                for y in range(len(self.players[newLeader].pickedCards)):
-                    self.cardValuesOfCurrentPlay.append(self.getValue(self.currentPlay[y]))
-
-
-        self.currentPlay = []
         
 
+    # def endGame(self):
+    #     ##Compare value of hands.
+    #     cardValues = []
+    #     for x in range(len(self.players)):
+    #         cardValues.append([])
+    #         for y in range(len(self.players[x].hand)):
+    #             cardValues[x].append(int(self.getValue(self.players[x].hand[y])))
 
-        winner = newLeader 
+    #     playerValue = []
+    #     for x in range(len(cardValues)):
+    #         playerValue.append(0)
+    #         for y in range(len(cardValues[x])):
+    #             playerValue[x]=playerValue[x]+cardValues[x][y]
+
         
-        return winner
+    #     for x in range(len(playerValue)):
+    #         if x==0:
+    #             lowScore = playerValue[x]
+    #             lowPlayer = 0
+    #         else:
+    #             if playerValue[x]<lowScore:
+    #                 lowScore = playerValue[x]
+    #                 lowPlayer=x
 
-    def endGame(self):
+    #     # for x in range(len(playerValue)):
+    #     #     print playerValue[x]
+    #     print""
+
+    #     for x in range(len(self.players)):
+    #         self.players[x].showHand()
+
+    #     print "{} wins the game!".format(self.players[lowPlayer].name)
+    #     exit()
+
+    #     return lowPlayer
+
+    def endRound(self):
         ##Compare value of hands.
         cardValues = []
+        winners = []
+
         for x in range(len(self.players)):
             cardValues.append([])
             for y in range(len(self.players[x].hand)):
                 cardValues[x].append(int(self.getValue(self.players[x].hand[y])))
 
-        playerValue = []
+        playerRoundScore = []
         for x in range(len(cardValues)):
-            playerValue.append(0)
+            playerRoundScore.append(0)
             for y in range(len(cardValues[x])):
-                playerValue[x]=playerValue[x]+cardValues[x][y]
+                playerRoundScore[x]=playerRoundScore[x]+cardValues[x][y]
 
+        minValue = min(playerRoundScore)
         
-        for x in range(len(playerValue)):
-            if x==0:
-                lowScore = playerValue[x]
-                lowPlayer = 0
-            else:
-                if playerValue[x]<lowScore:
-                    lowScore = playerValue[x]
-                    lowPlayer=x
+        for x in range(len(playerRoundScore)):
+            if playerRoundScore[x] == minValue:
+                winners.append(x)
+            # if x==0:
+            #     lowScore = playerRoundScore[x]
+            #     lowPlayer = 0
+            # else:
+            #     if playerRoundScore[x]<lowScore:
+            #         lowScore = playerRoundScore[x]
+            #         lowPlayer=x
 
-        # for x in range(len(playerValue)):
-        #     print playerValue[x]
+
         print""
 
         for x in range(len(self.players)):
             self.players[x].showHand()
 
-        print "{} wins the game!".format(self.players[lowPlayer].name)
-        exit()
+        print ""
 
-        return lowPlayer
+        for x in range(len(self.players)):
+            for y in range(len(winners)):
+                if x == winners[y]:
+                    playerRoundScore[x] = 0
+
+            self.players[x].score = self.players[x].score + playerRoundScore[x]
+            print "{}'s score is {} this round and {} in total ".format(self.players[x].name, playerRoundScore[x], self.players[x].score)
+
+        print ""
+
+        if len(winners) > 1:
+            print "Winners of this round:"
+            for y in range(len(winners)):
+                print self.players[winners[y]].name
+
+        else:
+            print "{} wins this round!".format(self.players[winners[0]].name)
+
+        return
+
+    def endGame(self):
+        scores = []
+        winners = []
+        
+        for x in range(len(self.players)):
+            scores.append(self.players[x].score)
+
+        minValue = min(scores)
+
+        for x in range(len(scores)):
+            if self.players[x].score == minValue:
+                winners.append(x)
+
+        # for x in range(len(self.players)):
+        #     if x==0:
+        #         lowScore = self.players[x].score
+        #         lowPlayer = x
+        #     else:
+        #         if self.players[x]<lowScore:
+        #             lowScore = self.players[x].score
+        #             lowPlayer=x
+        print ""
+
+        if len(winners) > 1:
+            print "Winners of the Game! :"
+            for y in range(len(winners)):
+                print self.players[winners[y]].name
+        else:
+            print "{} wins the game!".format(self.players[lowPlayer].name)
 
     def compareTwo(self,newPlayer,oldPlayer):
 
@@ -628,10 +741,17 @@ class Game(object):
         for r in range(0,rader):
             print ""
 
-    def pause(self):
-        print ""
-        print "Press enter when next player is ready..."
-        text = raw_input("")
+    def pause(self, newRound=False):
+
+        if newRound:
+            print ""
+            print "Press enter to begin new round..."
+            text = raw_input("")
+
+        else:
+            print ""
+            print "Press enter when next player is ready..."
+            text = raw_input("")
 
     def topCard(self):
         print "Top card: "
@@ -708,36 +828,47 @@ class Game(object):
             self.pause()
             self.printBlind(50)
 
+    def scratch(self):
+        for x in range(len(self.players)):
+            self.players[x].hand = []
+            self.players[x].pickedCards = []
+            self.players[x].legalMoves = []
+
+        self.currentPlay = []
+        self.cardValuesOfCurrentPlay = []
+        self.currentPlayer = 0
+        self.cardNrToBeat = 0        
+
+
     def playGame(self):
         
         print "=== A game of Gurka ==="
         print ""
 
-        for x in range(len(self.players)):
-            self.players[x].draw(Deck, 7)
+        for roundNr in range(self.numberOfRounds):
+            for x in range(len(self.players)):
+                self.players[x].draw(Deck, 7)
+            
+            print self.numberOfRounds - roundNr
 
-        self.topCard()
-        self.discardRound()
+            self.topCard()
+            self.discardRound()
+            self.playRound()
+            if (self.numberOfRounds - roundNr)>1:
+                self.endRound()
+                self.pause(newRound=True)
+                self.scratch()
+            else:
+                self.endRound()
+                self.endGame()
+                exit()
+            #x=x+1
 
-
-        inGame = True
-        while inGame:
-            roundWinner = self.playRound()
-            print self.players[roundWinner].name, " wins this round!"
-            print""
-            self.trashCards()
-            self.rearrangePlayers(roundWinner)
-
-
-            if not blind:
-                for y in range(len(self.players)):
-                    self.players[y].showHand()
-
-            x=x+1
-
-        winner = self.endGame()
+        #winner = self.endGame()
 
     def setUp(self):
+        rounds = raw_input("How many rounds do you want to play? ")
+        self.numberOfRounds = int(rounds)
         nr = raw_input("How many players? ")
         nr = int(nr)
         names = []
@@ -746,6 +877,8 @@ class Game(object):
             name = str(name)
             newPlayer = Player(name)
             self.players.append(newPlayer)
+
+
     
 
 # Test making a Deck
