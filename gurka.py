@@ -5,14 +5,6 @@ from termcolor import colored, cprint
 import argparse
 import textwrap
 
-# Plans (for this edition)
-# - Limit player possibilities
-# - 3 rounds (or selectable)
-# - fancy select cards (only possible cards)?
-
-# Missing feature: ending with two or more cards?
-# Missing feature two players wins the round
-
 
 parser = argparse.ArgumentParser(
      formatter_class=argparse.RawDescriptionHelpFormatter,
