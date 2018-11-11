@@ -13,7 +13,5 @@ Try it here: [https://repl.it/@mountwebs/PythonGurka](https://repl.it/@mountwebs
 - termcolor: https://pypi.org/project/termcolor/
 
 ## Future plans
-- Adding more rounds to the game
-- Limiting player possibilities
-- Fancy selection of cards
-- Adding ai
+- Adding some more rules
+- Adding (a lot )smarter bots
