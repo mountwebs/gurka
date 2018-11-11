@@ -887,7 +887,6 @@ class Game(object):
         self.rearrangePlayers(highestPlayer)            
 
     def discardRound(self):
-
         zero = False
         for x in range(len(self.players)):
             self.currentPlayer = x
@@ -913,9 +912,9 @@ class Game(object):
             ### if Human player
             else:
 
-                if blind and self.nrOfHumanPlayers()>1:
-                    self.pause()
-                    self.printBlind(50)
+                # if blind and self.nrOfHumanPlayers()>1:
+                #     self.pause()
+                #     self.printBlind(50)
 
 
                 self.players[x].showHand()
@@ -943,15 +942,20 @@ class Game(object):
 
                     print ""
 
-                    for y in range(0,discards):
-                        #self.players[x].showHand()
-                        discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
-                        discard = int(discardText)
-                        self.players[x].discard(discard-1)
+                    #discardText = raw_input(self.players[x].name+", do you want to discard 0 or {} cards? ".format(discards))
+                    string = self.players[x].name+", do you want to discard 0 or {} cards? ".format(discards)
+                    wannaDiscard = askPlayer(string, arrayOfInts=[0,discards], integer=True)
+
+                    if wannaDiscard>0:
+                        for y in range(0,discards):
+                            #self.players[x].showHand()
+                            discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
+                            discard = int(discardText)
+                            self.players[x].discard(discard-1)
+                            self.players[x].showHand()
+                        self.players[x].draw(Deck, discards)
+                        self.players[x].sort()
                         self.players[x].showHand()
-                    self.players[x].draw(Deck, discards)
-                    self.players[x].sort()
-                    self.players[x].showHand()
 
 
             if blind and not zero and self.nrOfHumanPlayers()>1:
@@ -1039,7 +1043,7 @@ class Game(object):
 
         return nrOfHumanPlayers
 
-def askPlayer(keys, integer=False, between=[], over=-1):
+def askPlayer(keys, integer=False, between=[], over=-1, arrayOfInts=[]):
     if integer:
         string=False
     else:
@@ -1062,15 +1066,26 @@ def askPlayer(keys, integer=False, between=[], over=-1):
                 print "The number has to be between {} and {}".format(between[0], between[1])
                 continue
 
-        if over > -1:
+        elif arrayOfInts:
+            rightNumber = False
+            for _ in range(len(arrayOfInts)):
+                if arrayOfInts[_] == out:
+                    return out
+            
+            print "Does not compute... Try again."
+            pass
+
+        elif over > -1:
             if out>over:
                 return out
             else:
                 print "The number has to be bigger then {}".format(over)
-                continue
+                pass
+        else:
+            break
 
 
-        break
+
         
     return out
 
@@ -1095,7 +1110,8 @@ def askWhatCard(keys,array):
         print ""
 
 
-# Setup
+
+### Setup
 Deck = Deck(1)
 Deck.shuffle()
 Game = Game()
@@ -1117,6 +1133,7 @@ if args.test:
 else:
     Game.setUp()
     Game.playGame()
+
 
 
 # deck.show()
