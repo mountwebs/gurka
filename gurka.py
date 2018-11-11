@@ -1,4 +1,5 @@
 import random
+from random import randint
 from collections import deque
 from termcolor import colored, cprint
 import argparse
@@ -24,6 +25,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-o", "--open", help="Everyone can see everyones cards",
                     action="store_true")
 parser.add_argument("-m", "--many", help="First player can always play many cards, regardless of wether s/he has double cards.",
+                    action="store_true")
+parser.add_argument("-nd", "--noDiscard", help="Skip Discard Round",
+                    action="store_true")
+parser.add_argument("-t", "--test", help="Testing",
                     action="store_true")
 args = parser.parse_args()
 if args.open:
@@ -61,10 +66,11 @@ class Card(object):
         return "{}{}".format(val, self.suit)
 
 class Deck(object):
-    def __init__(self):
+    def __init__(self, num):
         self.cards = []
+        self.deckNr = num
         self.build()
-        global deckNr
+        
 
     # Display all cards in the deck
     def show(self):
@@ -73,8 +79,7 @@ class Deck(object):
 
     # Generate 52 cards
     def build(self):
-        self.cards = []
-        for x in range(deckNr):
+        for x in range(self.deckNr):
             for suit in ['H', 'C', 'D', 'S']:
                 for val in range(1,14):
                     self.cards.append(Card(suit, val))
@@ -92,25 +97,29 @@ class Deck(object):
             # You can also use the build in shuffle method
             # random.shuffle(self.cards)
 
+    def removeDeck(self):
+        self.cards = []
+        return self
+
+    def newDeck(self,num=1):
+        for _ in range(num):
+            self.build()
+
     # Return the top card
     def deal(self):
         return self.cards.pop()
 
 class Player(object):
-    def __init__(self, name):
+    def __init__(self, name, isBot=False):
         self.name = name
         self.hand = []
         self.pickedCards = []
         self.legalMoves = []
         self.score = 0;
+        self.isBot = isBot
 
-    def pickCard(self, num):
-        card = self.hand[num-1]
-        self.pickedCards.append(card)
-        self.hand.pop(num-1)
-
+    def sortPickedCards(self):
         ## Sort (every time)
-
         for iter_num in range(len(self.pickedCards)-1,0,-1):
             #print "iter= ",iter_num
             #print len(self.hand)
@@ -122,8 +131,14 @@ class Player(object):
                 if self.getValue(self.pickedCards[idx])>self.getValue(self.pickedCards[idx+1]):
                     temp = self.pickedCards[idx]
                     self.pickedCards[idx] = self.pickedCards[idx+1]
-                    self.pickedCards[idx+1] = temp    
+                    self.pickedCards[idx+1] = temp
 
+    def pickCard(self, num):
+        card = self.hand[num-1]
+        self.pickedCards.append(card)
+        self.hand.pop(num-1)
+
+        self.sortPickedCards()
 
         return self
 
@@ -201,7 +216,7 @@ class Player(object):
         if showLegal and Game.currentPlay:
             Game.getLegalMoves()
             showLegalMoves = Game.players[Game.currentPlayer].legalMoves
-        else:
+        elif showLegal:
             #set all as legal
             for x in range(len(Game.players[Game.currentPlayer].hand)):
                 showLegalMoves.append(1)
@@ -339,20 +354,79 @@ class Player(object):
     def discard(self, num):
         return self.hand.pop(num)
 
+    def getOptions(self, plusOne=False):
+        options = []
+        if plusOne:
+            for _ in range(len(self.legalMoves)):
+                        if self.legalMoves[_] == 1:
+                            _ = _ +1
+                            options.append(_)
+        else:
+            for _ in range(len(self.legalMoves)):
+                        if self.legalMoves[_] == 1:
+                            options.append(_)
+
+        return options
+
+    def botPickCardRandom(self, num, legal=False):
+        
+        # self.showHand()
+        # print self.legalMoves
+        if legal:
+            for x in range(num):
+                Game.getLegalMoves()
+                options = []
+                options = self.getOptions()
+
+                # for _ in range(len(self.legalMoves)):
+                #     if self.legalMoves[_] == 1:
+                #         options.append(_)
+
+                cardOpt = randint(1, len(options))
+                cardNr = options[cardOpt-1]
+                TheCard = self.hand[cardNr]
+                self.pickedCards.append(TheCard)
+                self.hand.pop(cardNr)
+
+                # self.showHand()
+                # print self.legalMoves
+                # print options
+                # print cardOpt
+                # print cardNr
+                # print self.pickedCards
+
+        else: 
+            for x in range(num):
+                cardNr = randint(1, len(self.hand))
+                #print cardNr
+
+                TheCard = self.hand[cardNr-1]
+                self.pickedCards.append(TheCard)
+                self.hand.pop(cardNr-1)
+
+        self.sortPickedCards()
+ 
+        return self
+
+    def botRandomDiscards(self, num):
+        for x in range(num):
+            hand.pop(num)
+
+
 class Game(object):
     def __init__(self):
         self.players = []
         self.roundNumber = 0
         self.currentPlay = []
-        self.cardValuesOfCurrentPlay = []
+        self.cardValuesOfCurrentPlay = [] 
         self.currentPlayer = 0
         self.cardNrToBeat = 0
         self.numberOfPlayers = 0
         self.numberOfRounds = 0
+        self.decks = 1
         #self.setUp()
 
-
-    def joinGame(self, player):
+    def joinGame(self, player): 
         self.players.append(player)
         return self
 
@@ -446,8 +520,61 @@ class Game(object):
             for x in range(len(self.players)):
                 self.currentPlayer = x
                 self.cardNrToBeat = 0
-                if x==0:
 
+                if self.players[x].isBot and x==0:
+
+                    nowHand = len(self.players[x].hand)
+                    if nowHand <= 1:
+                        return
+
+                    #Skipping double cards for now
+
+                    numberOfCardsToPlay = 1
+                    atHand = len(self.players[x].hand) - numberOfCardsToPlay
+
+                    if atHand == 0:
+                        return
+
+                    self.currentPlay = self.players[x].pickedCards
+                    self.cardValuesOfCurrentPlay = []
+
+                    ## Pick cards
+                    self.players[self.currentPlayer].botPickCardRandom(numberOfCardsToPlay)
+
+                    ## Add cardValues
+                    for y in range(len(self.players[x].pickedCards)):
+                        self.cardValuesOfCurrentPlay.append(self.getValue(self.currentPlay[y]))
+
+                    self.currentPlay = self.players[x].pickedCards
+                    self.cardValuesOfCurrentPlay = []
+                    for y in range(len(self.players[x].pickedCards)):
+                        self.cardValuesOfCurrentPlay.append(self.getValue(self.currentPlay[y]))
+            
+                    newLeader = 0
+
+                    print "{} plays".format(self.players[x].name),
+                    self.players[x].showPickedCards()
+
+                elif self.players[x].isBot:
+
+                    ### Pick Cards
+                    self.players[self.currentPlayer].botPickCardRandom(numberOfCardsToPlay, legal=True)
+
+                    print "{} plays".format(self.players[x].name),
+                    self.players[x].showPickedCards()
+
+                    oldLeader = newLeader
+                    newLeader = self.compareTwo(x,oldLeader)
+
+
+                    self.currentPlay = self.players[newLeader].pickedCards
+                    self.cardValuesOfCurrentPlay = []
+                    for y in range(len(self.players[newLeader].pickedCards)):
+                        self.cardValuesOfCurrentPlay.append(self.getValue(self.currentPlay[y]))
+
+                    
+
+                elif x==0:
                     nowHand = len(self.players[x].hand)
                     if nowHand <= 1:
                         return
@@ -455,31 +582,24 @@ class Game(object):
                     print ""
                     if self.checkIfDoubleCards() or args.many:
                         self.players[x].showHand(showLegal=True)
-                        text = raw_input(self.players[x].name+", how many cards do you want to Play? ")
+                        string = self.players[x].name+", how many cards do you want to Play? "
+                        text = askPlayer(string, integer=True, between=[0,len(self.players[self.currentPlayer].hand)])
                         numberOfCardsToPlay = int(text)
 
-
-
-
-                        
                     else:
 
                         numberOfCardsToPlay = 1
-                        atHand = len(self.players[x].hand) - 1
 
                     atHand = len(self.players[x].hand) - numberOfCardsToPlay
 
-
                     if atHand == 0:
                         return
-                        # for z in range(len(self.players)):
-                        #     self.players[z].showHand()
-                        # self.endGame()
 
                     for i in range(numberOfCardsToPlay):
                         if not self.checkIfDoubleCards():
                             self.players[x].showHand(showLegal=True)
-                        text = raw_input(self.players[x].name+", what card number do you want to play?")
+                        string = self.players[x].name+", what card number do you want to play? "
+                        text = askPlayer(string,)
                         cardPick = int(text)
                         self.players[x].pickCard(cardPick)
                         if self.checkIfDoubleCards():
@@ -493,12 +613,14 @@ class Game(object):
             
                     newLeader = 0
 
-                    if blind:
+                    #If blind or next player is bot
+                    if blind and not self.nextPlayerIsBot() and not self.players[self.currentPlayer].isBot:
                         self.pause()
                         self.printBlind(50)
                     
                     print "{} plays".format(self.players[x].name),
                     self.players[x].showPickedCards()
+
                 else:
                     
                     print ""
@@ -506,7 +628,10 @@ class Game(object):
 
                     for y in range(numberOfCardsToPlay):
                         self.players[x].showHand(showLegal=True)
-                        text = raw_input(self.players[x].name+", what card number do you want to play?")
+                        string = self.players[x].name+", what card number do you want to play? "
+                        self.getLegalMoves()
+                        options= self.players[self.currentPlayer].getOptions(plusOne=True)
+                        text = askWhatCard(string, options)
                         number2 = int(text)
 
                         self.players[x].pickCard(number2)
@@ -524,8 +649,9 @@ class Game(object):
 
             winner = newLeader 
 
-            print self.players[winner].name, " wins this round!"
+            print self.players[winner].name + " wins this round!"
             print""
+            
             self.trashCards()
             self.rearrangePlayers(winner)
 
@@ -533,44 +659,17 @@ class Game(object):
             if not blind:
                 for y in range(len(self.players)):
                     self.players[y].showHand()
-        
-        
 
-    # def endGame(self):
-    #     ##Compare value of hands.
-    #     cardValues = []
-    #     for x in range(len(self.players)):
-    #         cardValues.append([])
-    #         for y in range(len(self.players[x].hand)):
-    #             cardValues[x].append(int(self.getValue(self.players[x].hand[y])))
+    def nextPlayerIsBot(self):
+        try:
+            if self.players[self.currentPlayer + 1].isBot:
+                return True
+            else:
+                return False
+        except:
+            pass
 
-    #     playerValue = []
-    #     for x in range(len(cardValues)):
-    #         playerValue.append(0)
-    #         for y in range(len(cardValues[x])):
-    #             playerValue[x]=playerValue[x]+cardValues[x][y]
-
-        
-    #     for x in range(len(playerValue)):
-    #         if x==0:
-    #             lowScore = playerValue[x]
-    #             lowPlayer = 0
-    #         else:
-    #             if playerValue[x]<lowScore:
-    #                 lowScore = playerValue[x]
-    #                 lowPlayer=x
-
-    #     # for x in range(len(playerValue)):
-    #     #     print playerValue[x]
-    #     print""
-
-    #     for x in range(len(self.players)):
-    #         self.players[x].showHand()
-
-    #     print "{} wins the game!".format(self.players[lowPlayer].name)
-    #     exit()
-
-    #     return lowPlayer
+        return False
 
     def endRound(self):
         ##Compare value of hands.
@@ -657,7 +756,7 @@ class Game(object):
             for y in range(len(winners)):
                 print self.players[winners[y]].name
         else:
-            print "{} wins the game!".format(self.players[lowPlayer].name)
+            print "{} wins the game!".format(self.players[winners[0]].name)
 
     def compareTwo(self,newPlayer,oldPlayer):
 
@@ -692,14 +791,15 @@ class Game(object):
             print "beat's {}'s".format(self.players[oldPlayer].name),
             print oldCards
 
-            if blind:
+            if blind and not self.nextPlayerIsBot() and self.nrOfHumanPlayers()>1:
                 self.pause()
                 self.printBlind(50)
 
-            print "{}'s".format(self.players[newPlayer].name),
-            print newCards,
-            print "beat's {}'s".format(self.players[oldPlayer].name),
-            print oldCards
+            if not self.nextPlayerIsBot() and self.nrOfHumanPlayers()>=2:
+                print "{}'s".format(self.players[newPlayer].name),
+                print newCards,
+                print "beats {}'s".format(self.players[oldPlayer].name),
+                print oldCards
 
             #print "{}'s {}' beat's {}'s {}".format(self.players[newPlayer].name, newCards, self.players[oldPlayer].name, oldCards) 
 
@@ -716,14 +816,15 @@ class Game(object):
             print "beat's {}'s".format(self.players[newPlayer].name),
             print newCards
 
-            if blind:
+            if blind and not self.nextPlayerIsBot() and self.nrOfHumanPlayers()>1:
                 self.pause()                
                 self.printBlind(50)
 
-            print "{}'s".format(self.players[oldPlayer].name),
-            print oldCards,
-            print "beat's {}'s".format(self.players[newPlayer].name),
-            print newCards
+            if not self.nextPlayerIsBot() and self.nrOfHumanPlayers()>=2:
+                print "{}'s".format(self.players[oldPlayer].name),
+                print oldCards,
+                print "beat's {}'s".format(self.players[newPlayer].name),
+                print newCards
 
 
 
@@ -757,22 +858,28 @@ class Game(object):
         print "Top card: "
         print ""
 
+        firstCardValue = []
+
         for x in range(len(self.players)):
-            self.players[x].firstCard = self.getValue(self.players[x].hand[6])
-            self.players[x].sort()
+            firstCardValue.append(self.getValue(self.players[x].hand[6]))
 
             print self.players[x].name,
             self.players[x].showCard(6)
             print ""
 
+            self.players[x].sort()
+
             if not blind:
                 self.players[x].showHand()
 
-        highest = 0
-        for z in range(len(self.players)):
-            if self.players[z].firstCard > highest:
-                highest = self.players[z].firstCard
-                highestPlayer = z
+        highestPlayer = max(xrange(len(firstCardValue)), key=firstCardValue.__getitem__)
+
+        # highest = 0
+        # for z in range(len(self.players)):
+        #     if self.getValue(self.players[z].firstCard) > highest:
+        #         highest = self.getValue(self.players[z].firstCard)
+
+        #         highestPlayer = z
 
         print ""
         print "{} begins!".format(self.players[highestPlayer].name)
@@ -783,50 +890,73 @@ class Game(object):
 
         zero = False
         for x in range(len(self.players)):
+            self.currentPlayer = x
 
-            if blind:
-                self.pause()
-                self.printBlind(50)
-
-            self.players[x].showHand()
-
-            if x==0:
-
-                print ""
-                discardsText = raw_input(self.players[x].name+", how many cards do you want to discard? ")
-                discards = int(discardsText)
-
-                if discards == 0:
-                    zero = True
-                    break
-
-                for y in range(0,discards):
-                    discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
-                    discard = int(discardText)
+            if self.players[x].isBot and x == 0:
+                discards = randint(0, len(self.players[self.currentPlayer].hand))
+                for _ in range(discards):
+                    discard = randint(1, len(self.players[self.currentPlayer].hand))
                     self.players[x].discard(discard-1)
-                    self.players[x].showHand()
                 self.players[x].draw(Deck, discards)
                 self.players[x].sort()
-                self.players[x].showHand()
 
+                print "{} discards {} cards".format(self.players[self.currentPlayer].name, discards)
+                print ""
+
+            elif self.players[x].isBot:
+                for _ in range(discards):
+                    discard = randint(1, len(self.players[self.currentPlayer].hand))
+                    self.players[x].discard(discard-1)
+                self.players[x].draw(Deck, discards)
+                self.players[x].sort()
+
+            ### if Human player
             else:
 
-                print ""
+                if blind and self.nrOfHumanPlayers()>1:
+                    self.pause()
+                    self.printBlind(50)
 
-                for y in range(0,discards):
-                    #self.players[x].showHand()
-                    discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
-                    discard = int(discardText)
-                    self.players[x].discard(discard-1)
-                    self.players[x].showHand()
-                self.players[x].draw(Deck, discards)
-                self.players[x].sort()
+
                 self.players[x].showHand()
 
+                if x==0:
 
-        if blind and not zero:
-            self.pause()
-            self.printBlind(50)
+                    print ""
+                    discardsText = raw_input(self.players[x].name+", how many cards do you want to discard? ")
+                    discards = int(discardsText)
+
+                    if discards == 0:
+                        zero = True
+                        break
+
+                    for y in range(0,discards):
+                        discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
+                        discard = int(discardText)
+                        self.players[x].discard(discard-1)
+                        self.players[x].showHand()
+                    self.players[x].draw(Deck, discards)
+                    self.players[x].sort()
+                    self.players[x].showHand()
+
+                else:
+
+                    print ""
+
+                    for y in range(0,discards):
+                        #self.players[x].showHand()
+                        discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
+                        discard = int(discardText)
+                        self.players[x].discard(discard-1)
+                        self.players[x].showHand()
+                    self.players[x].draw(Deck, discards)
+                    self.players[x].sort()
+                    self.players[x].showHand()
+
+
+            if blind and not zero and self.nrOfHumanPlayers()>1:
+                self.pause()
+                self.printBlind(50)
 
     def scratch(self):
         for x in range(len(self.players)):
@@ -839,20 +969,24 @@ class Game(object):
         self.currentPlayer = 0
         self.cardNrToBeat = 0        
 
-
     def playGame(self):
-        
         print "=== A game of Gurka ==="
         print ""
 
         for roundNr in range(self.numberOfRounds):
+            #How many decks?
+            Deck.removeDeck()
+            Deck.newDeck(self.decks)
+            Deck.shuffle()
+
             for x in range(len(self.players)):
                 self.players[x].draw(Deck, 7)
-            
-            print self.numberOfRounds - roundNr
 
             self.topCard()
-            self.discardRound()
+
+            if not args.noDiscard:
+                self.discardRound()
+
             self.playRound()
             if (self.numberOfRounds - roundNr)>1:
                 self.endRound()
@@ -867,29 +1001,131 @@ class Game(object):
         #winner = self.endGame()
 
     def setUp(self):
-        rounds = raw_input("How many rounds do you want to play? ")
+        rounds=askPlayer("How many rounds do you want to play? ", integer=True, over=0)
+        #rounds = raw_input("How many rounds do you want to play? ")
         self.numberOfRounds = int(rounds)
-        nr = raw_input("How many players? ")
-        nr = int(nr)
+        while True:
+            nrOfBots = askPlayer("How many bots? ", integer=True)
+            nrOfBots = int(nrOfBots)
+            for _ in range(nrOfBots):
+                int_ = _+ 1
+                str_ = str(int_)
+                bot = "bot" + str_
+                newBot = Player(bot, isBot=True)
+                self.players.append(newBot)
+
+            nrOfPlayers = askPlayer("How many players? ", integer=True)
+            nrOfPlayers = int(nrOfPlayers)
+            if (nrOfBots + nrOfPlayers) >= 2:
+                break
+            else:
+                print "There has to be at least two players"
+
         names = []
-        for x in range(nr):
-            name = raw_input("What is the name of player {}? ".format(x+1))
+        for x in range(nrOfPlayers):
+            string = "What is the name of player {}? ".format(x+1)
+            name = askPlayer(string)
             name = str(name)
             newPlayer = Player(name)
             self.players.append(newPlayer)
 
+        self.decks = 1 + len(self.players)/3
 
+    def nrOfHumanPlayers(self):
+        nrOfHumanPlayers = 0
+        for x in range(len(self.players)):
+            if not self.players[x].isBot:
+                nrOfHumanPlayers = nrOfHumanPlayers + 1
+
+        return nrOfHumanPlayers
+
+def askPlayer(keys, integer=False, between=[], over=-1):
+    if integer:
+        string=False
+    else:
+        string=True
     
+    while True:  
+        try:
+            if integer or between or over> -1:
+                out = int(raw_input(keys))
+            elif string:
+                out = str(raw_input(keys))
+        except:
+            print "Does not compute... Try again."
+            print ""
+            pass
+        if between:
+            if out>=between[0] and out<=between[1]:
+                return out
+            else:
+                print "The number has to be between {} and {}".format(between[0], between[1])
+                continue
 
-# Test making a Deck
-deckNr = 1
+        if over > -1:
+            if out>over:
+                return out
+            else:
+                print "The number has to be bigger then {}".format(over)
+                continue
 
-Deck = Deck()
+
+        break
+        
+    return out
+
+
+    # def createBots(self, num):
+        #botNames = [GRTA, Terminator, Bot]
+        #for _ in range(num):
+
+def askWhatCard(keys,array):
+    while True:
+        try:
+            out = int(raw_input(keys))
+        except:
+            print "Does not compute... Try again."
+            continue
+        inArray = False
+        for _ in range(len(array)):
+            if out == array[_]:
+                return out
+        
+        print "Not a legal move... Try again."
+        print ""
+
+
+# Setup
+Deck = Deck(1)
 Deck.shuffle()
-
 Game = Game()
-Game.setUp()
-Game.playGame()
+
+if args.test:
+    GRTA = Player("GRTA", isBot=True)
+    Game.joinGame(GRTA)
+    GRTA.draw(Deck, 7)
+    GRTA.sort()
+    GRTA.showHand()
+    Terminator = Player("Terminator", isBot=True)
+    Game.joinGame(Terminator)
+    Terminator.draw(Deck, 7)
+    Terminator.sort()
+    Terminator.showHand()
+    Game.playGame()
+
+
+else:
+    Game.setUp()
+    Game.playGame()
+
 
 # deck.show()
+
+## REPL Test
+# from gurka import Card, Deck, Player, Game
+# Deck = Deck(1)
+# Deck.shuffle()
+# Game = Game()
+
+
 
