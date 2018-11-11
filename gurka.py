@@ -583,7 +583,7 @@ class Game(object):
                     if self.checkIfDoubleCards() or args.many:
                         self.players[x].showHand(showLegal=True)
                         string = self.players[x].name+", how many cards do you want to Play? "
-                        text = askPlayer(string, integer=True, between=[0,len(self.players[self.currentPlayer].hand)])
+                        text = askPlayer(string, integer=True, between=[1,len(self.players[self.currentPlayer].hand)])
                         numberOfCardsToPlay = int(text)
 
                     else:
@@ -613,8 +613,8 @@ class Game(object):
             
                     newLeader = 0
 
-                    #If blind or next player is bot
-                    if blind and not self.nextPlayerIsBot() and not self.players[self.currentPlayer].isBot:
+                    #If blind or next player is bot...
+                    if blind and not (self.nextPlayerIsBot() or self.players[self.currentPlayer].isBot) and len(self.players)>x+1:
                         self.pause()
                         self.printBlind(50)
                     
@@ -651,6 +651,8 @@ class Game(object):
 
             print self.players[winner].name + " wins this round!"
             print""
+
+
             
             self.trashCards()
             self.rearrangePlayers(winner)
@@ -791,7 +793,7 @@ class Game(object):
             print "beat's {}'s".format(self.players[oldPlayer].name),
             print oldCards
 
-            if blind and not self.nextPlayerIsBot() and self.nrOfHumanPlayers()>1:
+            if blind and not (self.nextPlayerIsBot() or self.players[self.currentPlayer].isBot):
                 self.pause()
                 self.printBlind(50)
 
@@ -816,7 +818,7 @@ class Game(object):
             print "beat's {}'s".format(self.players[newPlayer].name),
             print newCards
 
-            if blind and not self.nextPlayerIsBot() and self.nrOfHumanPlayers()>1:
+            if blind and not self.nextPlayerIsBot() and not self.players[self.currentPlayer].isBot:
                 self.pause()                
                 self.printBlind(50)
 
@@ -922,16 +924,18 @@ class Game(object):
                 if x==0:
 
                     print ""
-                    discardsText = raw_input(self.players[x].name+", how many cards do you want to discard? ")
-                    discards = int(discardsText)
+                    #discardsText = raw_input(self.players[x].name+", how many cards do you want to discard? ")
+                    discards = askPlayer(self.players[x].name+", how many cards do you want to discard? ", integer=True, between=[0,7])
+
 
                     if discards == 0:
                         zero = True
                         break
 
                     for y in range(0,discards):
-                        discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
-                        discard = int(discardText)
+                        discard = askPlayer(self.players[x].name+", what card number do you want to discard? ", integer=True, between=[1,len(self.players[x].hand)])
+                        #discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
+                        #discard = int(discardText)
                         self.players[x].discard(discard-1)
                         self.players[x].showHand()
                     self.players[x].draw(Deck, discards)
@@ -949,16 +953,16 @@ class Game(object):
                     if wannaDiscard>0:
                         for y in range(0,discards):
                             #self.players[x].showHand()
-                            discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
-                            discard = int(discardText)
+                            #discardText = raw_input(self.players[x].name+", what card number do you want to discard? ")
+                            #discard = int(discardText)
+                            discard = askPlayer(self.players[x].name+", what card number do you want to discard? ", integer=True, between=[1,len(self.players[x].hand)])
                             self.players[x].discard(discard-1)
                             self.players[x].showHand()
                         self.players[x].draw(Deck, discards)
                         self.players[x].sort()
                         self.players[x].showHand()
 
-
-            if blind and not zero and self.nrOfHumanPlayers()>1:
+            if blind and not (self.nextPlayerIsBot() or self.players[self.currentPlayer].isBot):
                 self.pause()
                 self.printBlind(50)
 
@@ -1058,7 +1062,11 @@ def askPlayer(keys, integer=False, between=[], over=-1, arrayOfInts=[]):
         except:
             print "Does not compute... Try again."
             print ""
-            pass
+            continue
+
+        if string and not out:
+            print "Does not compute... Try again."
+            continue
         if between:
             if out>=between[0] and out<=between[1]:
                 return out
@@ -1073,14 +1081,14 @@ def askPlayer(keys, integer=False, between=[], over=-1, arrayOfInts=[]):
                     return out
             
             print "Does not compute... Try again."
-            pass
+            continue
 
         elif over > -1:
             if out>over:
                 return out
             else:
                 print "The number has to be bigger then {}".format(over)
-                pass
+                continue
         else:
             break
 
